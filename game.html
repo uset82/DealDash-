@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Deal Dash 🚗</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            background: #1a1a2e;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        #gameContainer {
+            position: relative;
+            border: 3px solid #444;
+            border-radius: 8px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            max-width: 100vw;
+            max-height: 70vh;
+        }
+        #gameCanvas {
+            display: block;
+            background: #2d2d44;
+            max-width: 100%;
+            max-height: 70vh;
+        }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-size: clamp(14px, 4vw, 20px);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        #level { font-size: clamp(14px, 3.5vw, 18px); color: #ff6b6b; margin-bottom: 5px; }
+        #timer { font-size: clamp(18px, 5vw, 28px); font-weight: bold; color: #ffdd57; }
+        #deals { margin-top: 5px; color: #7dff7d; }
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: clamp(24px, 6vw, 36px);
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.9);
+            display: none;
+            z-index: 100;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            color: #888;
+            font-size: clamp(10px, 2.5vw, 14px);
+            text-align: right;
+        }
+        #startScreen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            border-radius: 5px;
+            padding: 20px;
+            z-index: 200;
+        }
+        #startScreen h1 { font-size: clamp(28px, 8vw, 48px); color: #ffdd57; margin-bottom: 15px; }
+        #startScreen p { font-size: clamp(12px, 3.5vw, 18px); margin: 8px 0; color: #aaa; text-align: center; }
+        #startScreen .keys { color: #7dff7d; font-weight: bold; }
+        #startBtn {
+            margin-top: 20px;
+            padding: clamp(10px, 3vw, 15px) clamp(30px, 8vw, 50px);
+            font-size: clamp(16px, 4vw, 24px);
+            background: #ffdd57;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.1s, background 0.2s;
+        }
+        #startBtn:hover { background: #ffea80; transform: scale(1.05); }
+        
+        #levelComplete {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            z-index: 150;
+        }
+        #levelComplete h2 { font-size: clamp(24px, 7vw, 40px); color: #7dff7d; margin-bottom: 10px; }
+        #levelComplete p { font-size: clamp(14px, 4vw, 20px); color: #aaa; margin: 5px 0; }
+        #nextLevelBtn {
+            margin-top: 20px;
+            padding: 12px 40px;
+            font-size: clamp(14px, 4vw, 20px);
+            background: #7dff7d;
+            color: #1a1a2e;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        #touchControls {
+            display: none;
+            width: 100%;
+            padding: 10px;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 500px;
+            margin-top: 10px;
+        }
+        .touch-btn {
+            width: clamp(50px, 15vw, 70px);
+            height: clamp(50px, 15vw, 70px);
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            color: #fff;
+            font-size: clamp(20px, 6vw, 30px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        .touch-btn:active, .touch-btn.active {
+            background: rgba(255,221,87,0.4);
+            border-color: #ffdd57;
+        }
+        #leftControls, #rightControls { display: flex; gap: 8px; }
+        #leftControls { flex-direction: column; align-items: center; }
+        #leftRow { display: flex; gap: 8px; }
+        #brakeBtn { background: rgba(230,57,70,0.3); border-color: rgba(230,57,70,0.5); }
+        #brakeBtn:active, #brakeBtn.active { background: rgba(230,57,70,0.6); border-color: #e63946; }
+        #boostBtn { background: rgba(255,150,0,0.3); border-color: rgba(255,150,0,0.5); }
+        #boostBtn:active, #boostBtn.active { background: rgba(255,150,0,0.6); border-color: #ff9600; }
+        
+        #boostUI {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #ff9600;
+            font-size: clamp(14px, 3.5vw, 18px);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            text-align: right;
+        }
+        
+        @media (max-width: 768px), (hover: none) and (pointer: coarse) {
+            #touchControls { display: flex; }
+            #controls { display: none; }
+            #gameContainer { max-height: 55vh; }
+            #gameCanvas { max-height: 55vh; }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        <div id="ui">
+            <div id="level">Level 1 - City</div>
+            <div id="timer">2:00</div>
+            <div id="deals">Deals: 0/5</div>
+        </div>
+        <div id="message"></div>
+        <div id="controls">Arrow Keys - Drive | SPACE - Brake | SHIFT - 🔥 Boost</div>
+        <div id="boostUI">🔥 SHIFT = Boost</div>
+        
+        <div id="levelComplete">
+            <h2>🎉 Level Complete!</h2>
+            <p id="levelStats"></p>
+            <p id="nextLevelInfo"></p>
+            <button id="nextLevelBtn">Next Level →</button>
+        </div>
+        
+        <div id="startScreen">
+            <h1>🚗 Deal Dash</h1>
+            <p>Deliver packages across <span class="keys">10 unique levels!</span></p>
+            <p>Drive to the <span style="color:#ffdd57;">yellow markers</span></p>
+            <p><span class="keys">Arrow Keys</span> to drive | <span class="keys">SPACE</span> to brake</p>
+            <p style="color:#666;font-size:smaller;">Mobile: Use on-screen controls</p>
+            <button id="startBtn">START GAME</button>
+        </div>
+    </div>
+    
+    <div id="touchControls">
+        <div id="leftControls">
+            <div id="upBtn" class="touch-btn">▲</div>
+            <div id="leftRow">
+                <div id="leftBtn" class="touch-btn">◀</div>
+                <div id="downBtn" class="touch-btn">▼</div>
+                <div id="rightBtn" class="touch-btn">▶</div>
+            </div>
+        </div>
+        <div id="rightControls">
+            <div id="boostBtn" class="touch-btn">🔥</div>
+            <div id="brakeBtn" class="touch-btn">🛑</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const timerEl = document.getElementById('timer');
+        const dealsEl = document.getElementById('deals');
+        const levelEl = document.getElementById('level');
+        const messageEl = document.getElementById('message');
+        const startScreen = document.getElementById('startScreen');
+        const startBtn = document.getElementById('startBtn');
+        const levelComplete = document.getElementById('levelComplete');
+        const nextLevelBtn = document.getElementById('nextLevelBtn');
+        const levelStats = document.getElementById('levelStats');
+        const nextLevelInfo = document.getElementById('nextLevelInfo');
+
+        // Level configurations - 10 unique levels
+        const levels = [
+            { name: "City Center", packages: 5, time: 120, bg: '#2d2d44', road: '#3a3a50', carColor: '#e63946', carName: 'Red Sedan' },
+            { name: "Quiet Suburbs", packages: 5, time: 110, bg: '#2a3d2a', road: '#4a5a4a', carColor: '#3498db', carName: 'Blue Compact' },
+            { name: "Industrial Zone", packages: 6, time: 105, bg: '#3d3d3d', road: '#555555', carColor: '#f39c12', carName: 'Orange Van' },
+            { name: "Downtown", packages: 6, time: 100, bg: '#1a1a2e', road: '#2a2a4e', carColor: '#9b59b6', carName: 'Purple Sports' },
+            { name: "Beach Town", packages: 6, time: 95, bg: '#1a3d4d', road: '#3a5d6d', carColor: '#1abc9c', carName: 'Teal Cruiser' },
+            { name: "Desert Roads", packages: 7, time: 90, bg: '#4d3d2a', road: '#6d5d4a', carColor: '#e74c3c', carName: 'Red Truck' },
+            { name: "Forest Path", packages: 7, time: 85, bg: '#1d2d1a', road: '#3d4d3a', carColor: '#2ecc71', carName: 'Green SUV' },
+            { name: "Snowy Village", packages: 7, time: 80, bg: '#3d4d5d', road: '#6d7d8d', carColor: '#e67e22', carName: 'Orange Jeep' },
+            { name: "Night City", packages: 8, time: 75, bg: '#0d0d1a', road: '#1d1d3a', carColor: '#ff6b9d', carName: 'Pink Racer' },
+            { name: "Final Rush", packages: 10, time: 90, bg: '#2d1a2d', road: '#4d2a4d', carColor: '#ffd700', carName: 'Golden Champion' }
+        ];
+
+        let currentLevel = 0;
+        let gameActive = false;
+        let timeRemaining = 120;
+        let packagesDelivered = 0;
+        let totalPackages = 5;
+        let lastTime = 0;
+
+        const car = {
+            x: 500, y: 350, angle: 0, speed: 0,
+            width: 40, height: 20,
+            maxSpeed: 6, acceleration: 0.15,
+            friction: 0.02, turnSpeed: 0.05, brakeForce: 0.08,
+            color: '#e63946'
+        };
+
+        const keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
+        let roads = [];
+        let buildings = [];
+        let packages = [];
+        let powerups = [];
+        const raindrops = [];
+        const fireTrail = [];
+        
+        // Boost system
+        let boostCharges = 3;
+        let boostActive = false;
+        let boostTimer = 0;
+        const BOOST_DURATION = 4; // seconds
+        const boostUI = document.getElementById('boostUI');
+
+        // Map generators for each level
+        function generateLevel(levelNum) {
+            const level = levels[levelNum];
+            roads = [];
+            buildings = [];
+            
+            // Each level has unique road layout
+            switch(levelNum) {
+                case 0: // City Center - Cross roads
+                    roads = [
+                        { x: 0, y: 300, w: 1000, h: 100 },
+                        { x: 450, y: 0, w: 100, h: 700 }
+                    ];
+                    break;
+                case 1: // Suburbs - Grid
+                    roads = [
+                        { x: 0, y: 200, w: 1000, h: 70 },
+                        { x: 0, y: 450, w: 1000, h: 70 },
+                        { x: 150, y: 0, w: 70, h: 700 },
+                        { x: 500, y: 0, w: 70, h: 700 },
+                        { x: 850, y: 0, w: 70, h: 700 }
+                    ];
+                    break;
+                case 2: // Industrial - Wide roads
+                    roads = [
+                        { x: 0, y: 150, w: 1000, h: 90 },
+                        { x: 0, y: 450, w: 1000, h: 90 },
+                        { x: 80, y: 150, w: 90, h: 390 },
+                        { x: 450, y: 0, w: 90, h: 700 },
+                        { x: 820, y: 150, w: 90, h: 390 }
+                    ];
+                    break;
+                case 3: // Downtown - Many streets
+                    roads = [
+                        { x: 0, y: 120, w: 1000, h: 60 },
+                        { x: 0, y: 320, w: 1000, h: 60 },
+                        { x: 0, y: 520, w: 1000, h: 60 },
+                        { x: 120, y: 0, w: 60, h: 700 },
+                        { x: 370, y: 0, w: 60, h: 700 },
+                        { x: 620, y: 0, w: 60, h: 700 },
+                        { x: 870, y: 0, w: 60, h: 700 }
+                    ];
+                    break;
+                case 4: // Beach - Curved feel
+                    roads = [
+                        { x: 0, y: 350, w: 700, h: 80 },
+                        { x: 620, y: 100, w: 80, h: 330 },
+                        { x: 620, y: 100, w: 380, h: 80 },
+                        { x: 0, y: 550, w: 400, h: 70 },
+                        { x: 330, y: 350, w: 70, h: 270 },
+                        { x: 100, y: 150, w: 70, h: 280 },
+                        { x: 100, y: 150, w: 300, h: 70 }
+                    ];
+                    break;
+                case 5: // Desert - Long stretches
+                    roads = [
+                        { x: 0, y: 300, w: 1000, h: 100 },
+                        { x: 100, y: 50, w: 100, h: 350 },
+                        { x: 100, y: 50, w: 700, h: 80 },
+                        { x: 700, y: 50, w: 100, h: 350 },
+                        { x: 300, y: 500, w: 700, h: 80 },
+                        { x: 800, y: 300, w: 100, h: 280 }
+                    ];
+                    break;
+                case 6: // Forest - Winding paths
+                    roads = [
+                        { x: 0, y: 250, w: 400, h: 70 },
+                        { x: 330, y: 250, w: 70, h: 300 },
+                        { x: 330, y: 480, w: 400, h: 70 },
+                        { x: 660, y: 200, w: 70, h: 350 },
+                        { x: 660, y: 200, w: 340, h: 70 },
+                        { x: 100, y: 100, w: 70, h: 220 },
+                        { x: 100, y: 100, w: 300, h: 70 },
+                        { x: 800, y: 400, w: 200, h: 70 }
+                    ];
+                    break;
+                case 7: // Snow - Slippery feel
+                    roads = [
+                        { x: 0, y: 200, w: 1000, h: 80 },
+                        { x: 0, y: 500, w: 1000, h: 80 },
+                        { x: 150, y: 0, w: 80, h: 280 },
+                        { x: 450, y: 200, w: 80, h: 380 },
+                        { x: 750, y: 200, w: 80, h: 380 },
+                        { x: 150, y: 350, w: 380, h: 70 }
+                    ];
+                    break;
+                case 8: // Night City - Complex grid
+                    roads = [
+                        { x: 0, y: 100, w: 1000, h: 50 },
+                        { x: 0, y: 280, w: 1000, h: 50 },
+                        { x: 0, y: 460, w: 1000, h: 50 },
+                        { x: 0, y: 620, w: 1000, h: 50 },
+                        { x: 80, y: 0, w: 50, h: 700 },
+                        { x: 280, y: 0, w: 50, h: 700 },
+                        { x: 480, y: 0, w: 50, h: 700 },
+                        { x: 680, y: 0, w: 50, h: 700 },
+                        { x: 880, y: 0, w: 50, h: 700 }
+                    ];
+                    break;
+                case 9: // Final - Ultimate challenge
+                    roads = [
+                        { x: 0, y: 100, w: 1000, h: 50 },
+                        { x: 0, y: 250, w: 1000, h: 50 },
+                        { x: 0, y: 400, w: 1000, h: 50 },
+                        { x: 0, y: 550, w: 1000, h: 50 },
+                        { x: 100, y: 0, w: 50, h: 700 },
+                        { x: 250, y: 0, w: 50, h: 700 },
+                        { x: 400, y: 0, w: 50, h: 700 },
+                        { x: 550, y: 0, w: 50, h: 700 },
+                        { x: 700, y: 0, w: 50, h: 700 },
+                        { x: 850, y: 0, w: 50, h: 700 }
+                    ];
+                    break;
+            }
+            
+            generateBuildings(level.bg);
+            car.color = level.carColor;
+            totalPackages = level.packages;
+            timeRemaining = level.time;
+        }
+
+        function generateBuildings(baseColor) {
+            buildings = [];
+            const gridSize = 80;
+            
+            for (let x = 10; x < canvas.width - 10; x += gridSize) {
+                for (let y = 10; y < canvas.height - 10; y += gridSize) {
+                    const cx = x + gridSize / 2;
+                    const cy = y + gridSize / 2;
+                    
+                    if (!isOnRoad(cx, cy, 45)) {
+                        const w = 40 + Math.random() * 25;
+                        const h = 40 + Math.random() * 25;
+                        const bx = x + (gridSize - w) / 2;
+                        const by = y + (gridSize - h) / 2;
+                        
+                        // Vary building colors by level theme
+                        const level = levels[currentLevel];
+                        let hue, sat, light;
+                        
+                        switch(currentLevel) {
+                            case 0: hue = 240; sat = 15; light = 18; break; // Blue-gray city
+                            case 1: hue = 120; sat = 20; light = 20; break; // Green suburbs
+                            case 2: hue = 30; sat = 10; light = 22; break; // Brown industrial
+                            case 3: hue = 250; sat = 25; light = 15; break; // Purple downtown
+                            case 4: hue = 190; sat = 30; light = 25; break; // Cyan beach
+                            case 5: hue = 35; sat = 40; light = 30; break; // Orange desert
+                            case 6: hue = 100; sat = 35; light = 18; break; // Green forest
+                            case 7: hue = 200; sat = 15; light = 35; break; // Light blue snow
+                            case 8: hue = 260; sat = 40; light = 10; break; // Dark purple night
+                            case 9: hue = 300; sat: 30; light = 20; break; // Magenta final
+                        }
+                        
+                        buildings.push({
+                            x: bx, y: by, w, h,
+                            color: `hsl(${hue + Math.random()*20 - 10}, ${sat}%, ${light + Math.random()*8}%)`
+                        });
+                    }
+                }
+            }
+        }
+
+        function isOnRoad(x, y, margin = 0) {
+            for (let r of roads) {
+                if (x >= r.x - margin && x <= r.x + r.w + margin &&
+                    y >= r.y - margin && y <= r.y + r.h + margin) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function spawnPackages() {
+            packages = [];
+            const level = levels[currentLevel];
+            let attempts = 0;
+            
+            while (packages.length < level.packages && attempts < 1000) {
+                const x = 60 + Math.random() * (canvas.width - 120);
+                const y = 60 + Math.random() * (canvas.height - 120);
+                
+                if (isOnRoad(x, y, -5)) {
+                    let valid = true;
+                    for (let p of packages) {
+                        if (Math.hypot(p.x - x, p.y - y) < 100) {
+                            valid = false;
+                            break;
+                        }
+                    }
+                    if (valid && Math.hypot(car.x - x, car.y - y) > 80) {
+                        packages.push({ x, y, collected: false });
+                    }
+                }
+                attempts++;
+            }
+        }
+
+        function initRain() {
+            raindrops.length = 0;
+            const count = currentLevel === 7 ? 300 : 150; // More particles for snow
+            for (let i = 0; i < count; i++) {
+                raindrops.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    speed: currentLevel === 7 ? 3 + Math.random() * 2 : 8 + Math.random() * 4,
+                    length: currentLevel === 7 ? 3 : 10 + Math.random() * 10
+                });
+            }
+        }
+
+        // Input handlers
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { keys.w = true; e.preventDefault(); }
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { keys.a = true; e.preventDefault(); }
+            if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { keys.s = true; e.preventDefault(); }
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { keys.d = true; e.preventDefault(); }
+            if (e.key === ' ') { keys.space = true; e.preventDefault(); }
+            if (e.key === 'Shift') { keys.shift = true; e.preventDefault(); activateBoost(); }
+        });
+        document.addEventListener('keyup', e => {
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.w = false;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.a = false;
+            if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.s = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.d = false;
+            if (e.key === ' ') keys.space = false;
+            if (e.key === 'Shift') keys.shift = false;
+        });
+        
+        // Touch controls
+        const touchBtns = {
+            up: document.getElementById('upBtn'),
+            down: document.getElementById('downBtn'),
+            left: document.getElementById('leftBtn'),
+            right: document.getElementById('rightBtn'),
+            brake: document.getElementById('brakeBtn')
+        };
+        
+        function handleTouch(btn, key, isStart) {
+            keys[key] = isStart;
+            btn.classList.toggle('active', isStart);
+        }
+        
+        // Add boost button
+        touchBtns.boost = document.getElementById('boostBtn');
+        
+        Object.entries({ up: 'w', down: 's', left: 'a', right: 'd', brake: 'space', boost: 'shift' }).forEach(([btnName, key]) => {
+            const btn = touchBtns[btnName];
+            if (btn) {
+                btn.addEventListener('touchstart', (e) => { e.preventDefault(); handleTouch(btn, key, true); });
+                btn.addEventListener('touchend', (e) => { e.preventDefault(); handleTouch(btn, key, false); });
+                btn.addEventListener('touchcancel', (e) => { e.preventDefault(); handleTouch(btn, key, false); });
+                btn.addEventListener('mousedown', () => handleTouch(btn, key, true));
+                btn.addEventListener('mouseup', () => handleTouch(btn, key, false));
+                btn.addEventListener('mouseleave', () => handleTouch(btn, key, false));
+                
+                // Special handling for boost button
+                if (btnName === 'boost') {
+                    btn.addEventListener('touchstart', (e) => { e.preventDefault(); activateBoost(); });
+                    btn.addEventListener('mousedown', () => activateBoost());
+                }
+            }
+        });
+        
+        function activateBoost() {
+            if (!boostActive) {
+                boostActive = true;
+                boostTimer = BOOST_DURATION;
+                updateBoostUI();
+            }
+        }
+        
+        function updateBoostUI() {
+            if (boostActive) {
+                boostUI.innerHTML = `🔥 BOOST! ${boostTimer.toFixed(1)}s`;
+                boostUI.style.color = '#ff4400';
+            } else {
+                boostUI.innerHTML = `🔥 SHIFT = Boost`;
+                boostUI.style.color = '#ff9600';
+            }
+        }
+        
+        function spawnPowerups() {
+            powerups = [];
+            // Spawn 2-3 boost powerups per level
+            const count = 2 + Math.floor(currentLevel / 3);
+            let attempts = 0;
+            
+            while (powerups.length < count && attempts < 500) {
+                const x = 80 + Math.random() * (canvas.width - 160);
+                const y = 80 + Math.random() * (canvas.height - 160);
+                
+                if (isOnRoad(x, y, -5)) {
+                    let valid = true;
+                    for (let p of packages) {
+                        if (Math.hypot(p.x - x, p.y - y) < 80) valid = false;
+                    }
+                    for (let p of powerups) {
+                        if (Math.hypot(p.x - x, p.y - y) < 100) valid = false;
+                    }
+                    if (valid) powerups.push({ x, y, collected: false });
+                }
+                attempts++;
+            }
+        }
+
+        startBtn.addEventListener('click', () => { currentLevel = 0; startGame(); });
+        nextLevelBtn.addEventListener('click', () => { levelComplete.style.display = 'none'; startGame(); });
+
+        function startGame() {
+            startScreen.style.display = 'none';
+            levelComplete.style.display = 'none';
+            messageEl.style.display = 'none';
+            
+            generateLevel(currentLevel);
+            
+            // Start car on first road
+            if (roads.length > 0) {
+                const r = roads[0];
+                car.x = r.x + r.w / 2;
+                car.y = r.y + r.h / 2;
+            }
+            car.angle = 0;
+            car.speed = 0;
+            
+            // Adjust car handling per level
+            if (currentLevel === 7) { // Snow - slippery
+                car.friction = 0.01;
+                car.turnSpeed = 0.03;
+            } else if (currentLevel >= 8) { // Night/Final - faster
+                car.maxSpeed = 7;
+                car.friction = 0.02;
+                car.turnSpeed = 0.05;
+            } else {
+                car.maxSpeed = 6;
+                car.friction = 0.02;
+                car.turnSpeed = 0.05;
+            }
+            
+            packagesDelivered = 0;
+            boostCharges = 3;
+            boostActive = false;
+            boostTimer = 0;
+            fireTrail.length = 0;
+            updateBoostUI();
+            
+            spawnPackages();
+            spawnPowerups();
+            initRain();
+            
+            gameActive = true;
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function collidesWithBuilding(x, y, margin = 20) {
+            for (let b of buildings) {
+                if (x > b.x - margin && x < b.x + b.w + margin &&
+                    y > b.y - margin && y < b.y + b.h + margin) {
+                    return b;
+                }
+            }
+            return null;
+        }
+
+        function updateCar(dt) {
+            // Boost mode speed multiplier
+            const speedMult = boostActive ? 2.5 : 1;
+            const maxSpeedNow = car.maxSpeed * speedMult;
+            
+            if (keys.w) car.speed += car.acceleration * speedMult;
+            if (keys.s) car.speed -= car.acceleration * 0.7;
+            
+            if (keys.space && !boostActive) {
+                if (car.speed > 0) car.speed -= car.brakeForce;
+                else if (car.speed < 0) car.speed += car.brakeForce;
+                if (Math.abs(car.speed) < 0.1) car.speed = 0;
+            }
+            
+            car.speed *= (1 - car.friction);
+            car.speed = Math.max(-maxSpeedNow * 0.5, Math.min(maxSpeedNow, car.speed));
+            
+            if (Math.abs(car.speed) > 0.1) {
+                const turnMultiplier = car.speed > 0 ? 1 : -1;
+                if (keys.a) car.angle -= car.turnSpeed * turnMultiplier * Math.min(Math.abs(car.speed) / 3, 1);
+                if (keys.d) car.angle += car.turnSpeed * turnMultiplier * Math.min(Math.abs(car.speed) / 3, 1);
+            }
+            
+            const newX = car.x + Math.cos(car.angle) * car.speed;
+            const newY = car.y + Math.sin(car.angle) * car.speed;
+            
+            // When boosting, phase through buildings!
+            if (boostActive) {
+                car.x = newX;
+                car.y = newY;
+                
+                // Add fire trail particles
+                if (Math.abs(car.speed) > 1) {
+                    for (let i = 0; i < 3; i++) {
+                        fireTrail.push({
+                            x: car.x - Math.cos(car.angle) * 20 + (Math.random() - 0.5) * 15,
+                            y: car.y - Math.sin(car.angle) * 20 + (Math.random() - 0.5) * 15,
+                            size: 8 + Math.random() * 8,
+                            life: 1,
+                            vx: -Math.cos(car.angle) * 2 + (Math.random() - 0.5) * 2,
+                            vy: -Math.sin(car.angle) * 2 + (Math.random() - 0.5) * 2
+                        });
+                    }
+                }
+            } else {
+                const building = collidesWithBuilding(newX, newY, 18);
+                
+                if (building) {
+                    car.speed = 0;
+                    const carLeft = newX - building.x;
+                    const carRight = (building.x + building.w) - newX;
+                    const carTop = newY - building.y;
+                    const carBottom = (building.y + building.h) - newY;
+                    const minDist = Math.min(carLeft, carRight, carTop, carBottom);
+                    
+                    if (minDist === carLeft) car.x = building.x - 20;
+                    else if (minDist === carRight) car.x = building.x + building.w + 20;
+                    else if (minDist === carTop) car.y = building.y - 20;
+                    else car.y = building.y + building.h + 20;
+                } else {
+                    car.x = newX;
+                    car.y = newY;
+                }
+            }
+            
+            car.x = Math.max(25, Math.min(canvas.width - 25, car.x));
+            car.y = Math.max(25, Math.min(canvas.height - 25, car.y));
+            
+            // Update fire trail
+            for (let i = fireTrail.length - 1; i >= 0; i--) {
+                const p = fireTrail[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.03;
+                p.size *= 0.95;
+                if (p.life <= 0) fireTrail.splice(i, 1);
+            }
+        }
+        
+        function checkPowerups() {
+            powerups.forEach(p => {
+                if (!p.collected && Math.hypot(car.x - p.x, car.y - p.y) < 35) {
+                    p.collected = true;
+                    boostCharges++;
+                    updateBoostUI();
+                }
+            });
+        }
+        
+        function updateBoost(dt) {
+            if (boostActive) {
+                boostTimer -= dt;
+                updateBoostUI();
+                if (boostTimer <= 0) {
+                    boostActive = false;
+                    boostTimer = 0;
+                    updateBoostUI();
+                }
+            }
+        }
+
+        function checkPackages() {
+            packages.forEach(p => {
+                if (!p.collected && Math.hypot(car.x - p.x, car.y - p.y) < 35) {
+                    p.collected = true;
+                    packagesDelivered++;
+                    if (packagesDelivered >= totalPackages) completeLevel();
+                }
+            });
+        }
+
+        function completeLevel() {
+            gameActive = false;
+            
+            if (currentLevel >= levels.length - 1) {
+                messageEl.innerHTML = '🏆 CHAMPION! 🏆<br><span style="font-size:20px">All 10 levels complete!</span><br><span style="font-size:16px;color:#aaa">Click to play again</span>';
+                messageEl.style.color = '#ffd700';
+                messageEl.style.display = 'block';
+                messageEl.onclick = () => {
+                    currentLevel = 0;
+                    startScreen.style.display = 'flex';
+                    messageEl.style.display = 'none';
+                };
+            } else {
+                currentLevel++;
+                const next = levels[currentLevel];
+                levelStats.textContent = `Time bonus: +${Math.floor(timeRemaining)}s`;
+                nextLevelInfo.innerHTML = `<span style="color:#ffdd57">Level ${currentLevel + 1}: ${next.name}</span><br>🚗 ${next.carName} | 📦 ${next.packages} packages | ⏱️ ${next.time}s`;
+                levelComplete.style.display = 'flex';
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            messageEl.innerHTML = `⏰ TIME'S UP! ⏰<br><span style="font-size:20px">Level ${currentLevel + 1}: ${packagesDelivered}/${totalPackages}</span><br><span style="font-size:16px;color:#aaa">Click to retry</span>`;
+            messageEl.style.color = '#ff6b6b';
+            messageEl.style.display = 'block';
+            messageEl.onclick = () => { messageEl.style.display = 'none'; startGame(); };
+        }
+
+        function updateRain() {
+            const isSnow = currentLevel === 7;
+            raindrops.forEach(r => {
+                r.y += r.speed;
+                r.x += isSnow ? Math.sin(r.y * 0.02) * 0.5 : 2;
+                if (r.y > canvas.height) { r.y = -r.length; r.x = Math.random() * canvas.width; }
+                if (r.x > canvas.width) r.x = 0;
+                if (r.x < 0) r.x = canvas.width;
+            });
+        }
+
+        function updateUI() {
+            const level = levels[currentLevel];
+            levelEl.textContent = `Level ${currentLevel + 1} - ${level.name}`;
+            const mins = Math.floor(timeRemaining / 60);
+            const secs = Math.floor(timeRemaining % 60);
+            timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+            dealsEl.textContent = `Deals: ${packagesDelivered}/${totalPackages}`;
+        }
+
+        function drawRoads() {
+            const level = levels[currentLevel];
+            ctx.fillStyle = level.road;
+            roads.forEach(r => ctx.fillRect(r.x, r.y, r.w, r.h));
+            
+            // Road lines
+            ctx.strokeStyle = currentLevel === 7 ? '#ffffff' : '#ffdd57';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([20, 15]);
+            roads.forEach(r => {
+                ctx.beginPath();
+                if (r.w > r.h) {
+                    ctx.moveTo(r.x, r.y + r.h/2);
+                    ctx.lineTo(r.x + r.w, r.y + r.h/2);
+                } else {
+                    ctx.moveTo(r.x + r.w/2, r.y);
+                    ctx.lineTo(r.x + r.w/2, r.y + r.h);
+                }
+                ctx.stroke();
+            });
+            ctx.setLineDash([]);
+        }
+
+        function drawFireTrail() {
+            fireTrail.forEach(p => {
+                const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+                gradient.addColorStop(0, `rgba(255, 255, 100, ${p.life})`);
+                gradient.addColorStop(0.3, `rgba(255, 150, 0, ${p.life * 0.8})`);
+                gradient.addColorStop(0.6, `rgba(255, 50, 0, ${p.life * 0.5})`);
+                gradient.addColorStop(1, 'rgba(100, 0, 0, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+        
+        function drawPowerups() {
+            const pulse = Math.sin(Date.now() * 0.008) * 0.3 + 0.7;
+            powerups.forEach(p => {
+                if (!p.collected) {
+                    // Glow effect
+                    const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 35);
+                    gradient.addColorStop(0, `rgba(255, 150, 0, ${0.6 * pulse})`);
+                    gradient.addColorStop(0.5, `rgba(255, 100, 0, ${0.3 * pulse})`);
+                    gradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 35, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Fire icon background
+                    ctx.fillStyle = '#ff6600';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 15, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Fire symbol
+                    ctx.fillStyle = '#ffff00';
+                    ctx.font = '18px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🔥', p.x, p.y);
+                }
+            });
+        }
+        
+        function drawBuildings() {
+            buildings.forEach(b => {
+                ctx.fillStyle = b.color;
+                ctx.fillRect(b.x, b.y, b.w, b.h);
+                
+                // Windows - brighter for night level
+                const windowAlpha = currentLevel === 8 ? 0.6 : 0.25;
+                ctx.fillStyle = `rgba(255, 220, 100, ${windowAlpha})`;
+                for (let wx = b.x + 6; wx < b.x + b.w - 6; wx += 14) {
+                    for (let wy = b.y + 6; wy < b.y + b.h - 6; wy += 12) {
+                        if (Math.random() > 0.35) ctx.fillRect(wx, wy, 6, 8);
+                    }
+                }
+            });
+        }
+
+        function drawPackages() {
+            const pulse = Math.sin(Date.now() * 0.005) * 0.3 + 0.7;
+            packages.forEach(p => {
+                if (!p.collected) {
+                    const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 40);
+                    gradient.addColorStop(0, `rgba(255, 221, 87, ${0.5 * pulse})`);
+                    gradient.addColorStop(1, 'rgba(255, 221, 87, 0)');
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 40, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = '#ffdd57';
+                    ctx.fillRect(p.x - 12, p.y - 12, 24, 24);
+                    ctx.strokeStyle = '#aa9933';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(p.x - 12, p.y - 12, 24, 24);
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y - 12);
+                    ctx.lineTo(p.x, p.y + 12);
+                    ctx.moveTo(p.x - 12, p.y);
+                    ctx.lineTo(p.x + 12, p.y);
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function drawCar() {
+            ctx.save();
+            ctx.translate(car.x, car.y);
+            ctx.rotate(car.angle);
+            
+            // Boost glow effect
+            if (boostActive) {
+                const glowGradient = ctx.createRadialGradient(0, 0, 10, 0, 0, 50);
+                glowGradient.addColorStop(0, 'rgba(255, 150, 0, 0.5)');
+                glowGradient.addColorStop(0.5, 'rgba(255, 100, 0, 0.2)');
+                glowGradient.addColorStop(1, 'rgba(255, 50, 0, 0)');
+                ctx.fillStyle = glowGradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, 50, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(-car.width/2 + 3, -car.height/2 + 3, car.width, car.height);
+            
+            // Body - pulse orange when boosting
+            if (boostActive) {
+                const pulse = Math.sin(Date.now() * 0.02) * 0.3 + 0.7;
+                ctx.fillStyle = `rgb(255, ${Math.floor(100 + pulse * 100)}, 0)`;
+            } else {
+                ctx.fillStyle = car.color;
+            }
+            ctx.fillRect(-car.width/2, -car.height/2, car.width, car.height);
+            
+            // Roof/cabin
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillRect(-car.width/4, -car.height/2 + 2, car.width/2, car.height - 4);
+            
+            // Windshield
+            ctx.fillStyle = '#87ceeb';
+            ctx.fillRect(car.width/2 - 10, -car.height/2 + 3, 6, car.height - 6);
+            
+            // Headlights
+            ctx.fillStyle = '#ffffcc';
+            ctx.fillRect(car.width/2 - 2, -car.height/2 + 2, 4, 4);
+            ctx.fillRect(car.width/2 - 2, car.height/2 - 6, 4, 4);
+            
+            // Taillights
+            ctx.fillStyle = '#ff4444';
+            ctx.fillRect(-car.width/2 - 2, -car.height/2 + 2, 4, 4);
+            ctx.fillRect(-car.width/2 - 2, car.height/2 - 6, 4, 4);
+            
+            ctx.restore();
+        }
+
+        function drawWeather() {
+            const isSnow = currentLevel === 7;
+            ctx.fillStyle = isSnow ? 'rgba(255, 255, 255, 0.8)' : 'rgba(150, 180, 255, 0.4)';
+            
+            if (isSnow) {
+                raindrops.forEach(r => {
+                    ctx.beginPath();
+                    ctx.arc(r.x, r.y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            } else {
+                ctx.strokeStyle = 'rgba(150, 180, 255, 0.3)';
+                ctx.lineWidth = 1;
+                raindrops.forEach(r => {
+                    ctx.beginPath();
+                    ctx.moveTo(r.x, r.y);
+                    ctx.lineTo(r.x + 3, r.y + r.length);
+                    ctx.stroke();
+                });
+            }
+        }
+
+        function gameLoop(timestamp) {
+            const dt = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+
+            if (gameActive) {
+                timeRemaining -= dt;
+                if (timeRemaining <= 0) { timeRemaining = 0; endGame(); return; }
+                updateBoost(dt);
+                updateCar(dt);
+                checkPackages();
+                checkPowerups();
+                updateRain();
+                updateUI();
+            }
+
+            const level = levels[currentLevel];
+            ctx.fillStyle = level.bg;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawRoads();
+            drawBuildings();
+            drawFireTrail();
+            drawPackages();
+            drawPowerups();
+            drawCar();
+            drawWeather();
+
+            if (gameActive) requestAnimationFrame(gameLoop);
+        }
+
+        // Init
+        generateLevel(0);
+        initRain();
+        ctx.fillStyle = levels[0].bg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        drawRoads();
+        drawBuildings();
+        drawWeather();
+    </script>
+</body>
+</html>
