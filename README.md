@@ -4,7 +4,9 @@ A fun browser-based delivery car game! Race through 10 unique levels, deliver pa
 
 ## 🎮 Play Now
 
-Just open `game.html` in any modern web browser - no installation needed!
+Just open `index.html` in any modern web browser - no installation needed!
+
+**Play Online:** [https://dealdash2025.netlify.app](https://dealdash2025.netlify.app)
 
 ## 📝 Game Concept
 
@@ -62,7 +64,7 @@ Press **SHIFT** (or 🔥 button on mobile) to activate:
 
 ```
 DealDash/
-├── game.html      # 🎮 The game - open this to play!
+├── index.html     # 🎮 The game - open this to play!
 ├── README.md      # This file
 └── WARP.md        # Developer documentation
 ```
