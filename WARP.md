@@ -4,78 +4,66 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 ## Project Overview
 
-Deal Dash is a Unity 3D delivery car game. Drive a sedan through a rainy city delivering 5 packages within 10 minutes.
+Deal Dash is a browser-based HTML5 Canvas delivery car game with 10 levels and fire boost power.
 
-**Engine:** Unity 2021.3 LTS or newer
+**Live:** https://dealdash2025.netlify.app
 
-## Development Commands
+## Files
 
-```powershell
-# Open project in Unity (adjust path to your Unity installation)
-& "C:\Program Files\Unity\Hub\Editor\2021.3.x\Editor\Unity.exe" -projectPath "C:\Users\CARLOS\Desktop\JACOB\CARS\DealDash"
+```
+DealDash/
+├── index.html    # The entire game (single file)
+├── README.md     # Documentation
+└── WARP.md       # This file
 ```
 
-Unity operations (build, test, play) are done through the Unity Editor GUI - no CLI build system.
+## Development
+
+```bash
+# Open game locally
+start index.html
+
+# Or use live server
+npx serve .
+```
 
 ## Code Architecture
 
-~190 lines across 4 scripts in `Assets/Scripts/`:
+The game is a single `index.html` file (~1000 lines) with embedded CSS and JavaScript.
+
+### Key Components
+
+- **Level System** - 10 levels with unique road layouts, colors, and difficulty
+- **Car Physics** - Simple 2D physics with acceleration, friction, steering
+- **Collision System** - Building collision detection with push-out
+- **Boost System** - Unlimited fire boost for speed and phasing through buildings
+- **Weather Effects** - Rain particles (snow on level 7)
+- **Touch Controls** - Mobile-responsive with on-screen buttons
+
+### Game Loop
 
 ```
-GameManager (Singleton)
-    ↓ notifies
-UIManager ←────────── updates timer/counter UI
-    
-CarController ─────── handles input, physics, audio, camera
-    
-PackageDelivery ────→ GameManager.DeliverPackage()
+gameLoop()
+  ├── updateBoost(dt)      # Manage boost timer
+  ├── updateCar(dt)        # Physics, collision, fire trail
+  ├── checkPackages()      # Package collection
+  ├── checkPowerups()      # Power-up collection
+  ├── updateRain()         # Weather particles
+  ├── updateUI()           # Timer, level, score display
+  └── draw*()              # Render all elements
 ```
 
-### Script Responsibilities
+### Level Configuration
 
-- **GameManager.cs** - Singleton managing game state. Owns `timeRemaining`, `packagesDelivered`, `gameActive`. Calls `UIManager` on state changes. `DeliverPackage(points)` is the entry point for scoring.
+Levels are defined in the `levels` array:
+```javascript
+{ name, packages, time, bg, road, carColor, carName }
+```
 
-- **CarController.cs** - Attached to player car. Uses Unity's WheelCollider system (rear-wheel drive). Handles WASD/Space input in `Update()`, applies physics in `FixedUpdate()`. Also controls main camera follow with shake effect.
+Each level has a `generateLevel()` switch case for road layout.
 
-- **UIManager.cs** - Receives calls from GameManager to update legacy UI Text elements. No logic of its own.
+## Deployment
 
-- **PackageDelivery.cs** - Self-contained delivery markers. Creates its own Point Light on Start if none exists. Calls `GameManager.Instance.DeliverPackage()` on trigger collision with "Player" tag, then self-destructs.
+Hosted on Netlify. Auto-deploys from GitHub on push to main.
 
-### Key Patterns
-
-- GameManager uses singleton via `Instance` property
-- Car must be tagged "Player" for package collision detection
-- WheelColliders must be assigned in inspector (frontLeft, frontRight, rearLeft, rearRight)
-- Center of mass is lowered (`y: -0.5`) for stability
-
-## Configuration
-
-Adjustable via Unity Inspector:
-
-| Component | Field | Default | Purpose |
-|-----------|-------|---------|---------|
-| GameManager | gameDuration | 600 | Timer in seconds |
-| GameManager | totalPackages | 5 | Win condition |
-| CarController | motorPower | 1500 | Acceleration |
-| CarController | wheelGrip | 0.8 | Tire traction |
-| CarController | cameraDistance | 6 | Chase cam distance |
-| PackageDelivery | pointsPerDelivery | 100 | Score per package |
-
-## Scene Setup Requirements
-
-See `SETUP.md` for detailed instructions. Critical elements:
-
-1. Car GameObject needs Rigidbody (Mass: 1200) + 4 WheelCollider children
-2. Package markers need BoxCollider with "Is Trigger" enabled
-3. Canvas with timerText and deliveryCountText UI elements
-4. Rain particle system positioned above play area
-
-## Asset Dependencies
-
-External assets required (not included in repo):
-- Car model (.fbx)
-- City/building assets
-- Audio clips: engine loop, tire squeal, rain ambient, delivery sound
-- Wet asphalt textures
-
-See `ASSETS.md` for free asset recommendations from Unity Asset Store and Kenney.nl.
+To deploy elsewhere, just host `index.html` - no build step needed.
